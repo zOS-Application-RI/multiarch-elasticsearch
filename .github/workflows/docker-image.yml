@@ -8,19 +8,20 @@ on:
 
 jobs:
   docker:
-    # runs-on: ubuntu-latest
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
+    # runs-on: self-hosted
 
     steps:
       -
         name: Checkout
         uses: actions/checkout@v2
-      # -
-      #   name: Set up QEMU
-      #   uses: docker/setup-qemu-action@v1.2.0
-      #   with:
-      #     image: tonistiigi/binfmt:latest
-      #     platforms: all
+
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v1.2.0
+        with:
+          image: tonistiigi/binfmt:latest
+          platforms: all
       # - 
         # name: Linelint
         # uses: fernandrone/linelint@0.0.4
@@ -52,7 +53,8 @@ jobs:
           file: ./Dockerfile
           push: true
           # platforms: linux/amd64, linux/arm64, linux/ppc64le, linux/s390x
-          platforms: linux/amd64, linux/ppc64le, linux/s390x
+          # platforms: linux/amd64, linux/ppc64le, linux/s390x
+          platforms: linux/amd64, linux/s390x
           tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
