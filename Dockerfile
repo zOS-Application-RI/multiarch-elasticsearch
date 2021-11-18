@@ -43,7 +43,7 @@ ENV JAVA_HOME=/opt/adopt/java
 ENV JAVA15_HOME=/opt/adopt/java
 ENV PATH=$JAVA_HOME/bin:$PATH
 ENV PATCH_URL="https://raw.githubusercontent.com/linux-on-ibm-z/scripts/master/Elasticsearch/${ELASTICSEARCH_VER}/patch"
-ENV ADOPTJDK_URL="https://github.com/AdoptOpenJDK/openjdk15-binaries/releases/download/jdk-15.0.2%2B7/OpenJDK15U-jdk_s390x_linux_hotspot_15.0.2_7.tar.gz"
+ENV ADOPTJDK_URL="https://github.com/AdoptOpenJDK/openjdk15-binaries/releases/download/jdk-15.0.2%2B7/OpenJDK15U-jdk_${archt}_linux_hotspot_15.0.2_7.tar.gz"
 
 RUN apt-get update && apt-get install -y \
     curl \
@@ -61,9 +61,9 @@ RUN apt-get update && apt-get install -y \
 RUN set -eux ; \
     tini_bin="" ; \
     case "$(arch)" in \
-        aarch64) tini_bin='tini-arm64' ;; \
-        x86_64)  tini_bin='tini-amd64' ;; \
-        s390x)   tini_bin='tini-s390x' ;; \
+        aarch64) tini_bin='tini-arm64' archt='';; \
+        x86_64)  tini_bin='tini-amd64' archt='x64';; \
+        s390x)   tini_bin='tini-s390x' archt='s390x';; \
         *) echo >&2 ; echo >&2 "Unsupported architecture $(arch)" ; echo >&2 ; exit 1 ;; \
     esac ; \
     curl --retry 10 -S -L -O https://github.com/krallin/tini/releases/download/v0.19.0/${tini_bin} ; \
