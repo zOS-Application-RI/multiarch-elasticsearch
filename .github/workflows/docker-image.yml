@@ -10,17 +10,17 @@ jobs:
   docker:
     # runs-on: ubuntu-latest
     runs-on: self-hosted
-    
+
     steps:
       -
         name: Checkout
         uses: actions/checkout@v2
-      -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v1.2.0
-        with:
-          image: tonistiigi/binfmt:latest
-          platforms: all
+      # -
+      #   name: Set up QEMU
+      #   uses: docker/setup-qemu-action@v1.2.0
+      #   with:
+      #     image: tonistiigi/binfmt:latest
+      #     platforms: all
       # - 
         # name: Linelint
         # uses: fernandrone/linelint@0.0.4
