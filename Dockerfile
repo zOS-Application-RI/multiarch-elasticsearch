@@ -87,8 +87,8 @@ RUN set -eux ; \
     archt="" ; \
     case "$(arch)" in \
     aarch64) ADOPTJDK_URL="";; \
-    x86_64)  ADOPTJDK_URL="https://github.com/AdoptOpenJDK/openjdk15-binaries/releases/download/jdk-15%2B36_openj9-0.22.0/OpenJDK15U-jdk_x64_linux_openj9_linuxXL_15_36_openj9-0.22.0.tar.gz";; \
-    s390x)   ADOPTJDK_URL="https://github.com/AdoptOpenJDK/openjdk15-binaries/releases/download/jdk-15%2B36_openj9-0.22.0/OpenJDK15U-jdk_s390x_linux_openj9_linuxXL_15_36_openj9-0.22.0.tar.gz";; \
+    x86_64) archt='x86_64' ADOPTJDK_URL="https://github.com/AdoptOpenJDK/openjdk15-binaries/releases/download/jdk-15%2B36_openj9-0.22.0/OpenJDK15U-jdk_x64_linux_openj9_linuxXL_15_36_openj9-0.22.0.tar.gz";; \
+    s390x)  archt='s390x' ADOPTJDK_URL="https://github.com/AdoptOpenJDK/openjdk15-binaries/releases/download/jdk-15%2B36_openj9-0.22.0/OpenJDK15U-jdk_s390x_linux_openj9_linuxXL_15_36_openj9-0.22.0.tar.gz";; \
     *) echo >&2 ; echo >&2 "Unsupported architecture $(arch)" ; echo >&2 ; exit 1 ;; \
     esac ; \
     apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
