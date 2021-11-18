@@ -29,8 +29,7 @@
 # Extract Elasticsearch artifact
 ################################################################################
 
-# FROM s390x/ubuntu:20.04 AS builder
-FROM ubuntu:20.04 AS builder
+FROM s390x/ubuntu:20.04 AS builder
 
 ARG ELASTICSEARCH_VER=7.12.1
 
@@ -39,13 +38,11 @@ LABEL maintainer="LoZ Open Source Ecosystem (https://www.ibm.com/community/z/use
 
 ENV LANG="en_US.UTF-8"
 ENV SOURCE_DIR="/tmp/"
-ENV archt=''
 ENV JAVA_HOME=/opt/adopt/java
 ENV JAVA15_HOME=/opt/adopt/java
 ENV PATH=$JAVA_HOME/bin:$PATH
 ENV PATCH_URL="https://raw.githubusercontent.com/linux-on-ibm-z/scripts/master/Elasticsearch/${ELASTICSEARCH_VER}/patch"
-# ENV ADOPTJDK_URL="https://github.com/AdoptOpenJDK/openjdk15-binaries/releases/download/jdk-15.0.2%2B7/OpenJDK15U-jdk_${archt}_linux_hotspot_15.0.2_7.tar.gz"
-# ENV ADOPTJDK_URL="https://github.com/AdoptOpenJDK/openjdk15-binaries/releases/download/jdk-15%2B36_openj9-0.22.0/OpenJDK15U-jdk_${archt}_linux_openj9_15_36_openj9-0.22.0.tar.gz"
+ENV ADOPTJDK_URL="https://github.com/AdoptOpenJDK/openjdk15-binaries/releases/download/jdk-15.0.2%2B7/OpenJDK15U-jdk_s390x_linux_hotspot_15.0.2_7.tar.gz"
 
 RUN apt-get update && apt-get install -y \
     curl \
@@ -63,9 +60,9 @@ RUN apt-get update && apt-get install -y \
 RUN set -eux ; \
     tini_bin="" ; \
     case "$(arch)" in \
-        aarch64) tini_bin='tini-arm64' archt='';; \
-        x86_64)  tini_bin='tini-amd64' archt='x64';; \
-        s390x)   tini_bin='tini-s390x' archt='s390x';; \
+        aarch64) tini_bin='tini-arm64' ;; \
+        x86_64)  tini_bin='tini-amd64' ;; \
+        s390x)   tini_bin='tini-s390x' ;; \
         *) echo >&2 ; echo >&2 "Unsupported architecture $(arch)" ; echo >&2 ; exit 1 ;; \
     esac ; \
     curl --retry 10 -S -L -O https://github.com/krallin/tini/releases/download/v0.19.0/${tini_bin} ; \
@@ -83,28 +80,18 @@ RUN /usr/sbin/groupadd -g 1000 elasticsearch && \
 WORKDIR /usr/share/elasticsearch
 
 # Set up locale
-RUN set -eux ; \
-    archt="" ; \
-    case "$(arch)" in \
-    aarch64) ADOPTJDK_URL="";; \
-    x86_64) archt='x86_64' ADOPTJDK_URL="https://github.com/AdoptOpenJDK/openjdk15-binaries/releases/download/jdk-15%2B36_openj9-0.22.0/OpenJDK15U-jdk_x64_linux_openj9_linuxXL_15_36_openj9-0.22.0.tar.gz";; \
-    s390x)  archt='s390x' ADOPTJDK_URL="https://github.com/AdoptOpenJDK/openjdk15-binaries/releases/download/jdk-15%2B36_openj9-0.22.0/OpenJDK15U-jdk_s390x_linux_openj9_linuxXL_15_36_openj9-0.22.0.tar.gz";; \
-    *) echo >&2 ; echo >&2 "Unsupported architecture $(arch)" ; echo >&2 ; exit 1 ;; \
-    esac ; \
-    apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
-    && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 \
+RUN apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
+ && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 \
 # Install AdoptOpenJDK 15 (with hotspot)
-    && cd $SOURCE_DIR && mkdir -p /opt/adopt/java && curl -SL -o adoptjdk.tar.gz $ADOPTJDK_URL \
-    && tar -zxf adoptjdk.tar.gz -C /opt/adopt/java --strip-components 1 \
+ && cd $SOURCE_DIR && mkdir -p /opt/adopt/java && curl -SL -o adoptjdk.tar.gz $ADOPTJDK_URL \
+ && tar -zxf adoptjdk.tar.gz -C /opt/adopt/java --strip-components 1 \
 # Download and Build Elasticsearch
-    && cd $SOURCE_DIR && git clone https://github.com/elastic/elasticsearch && cd elasticsearch && git checkout v${ELASTICSEARCH_VER} \
-    && curl -sSL $PATCH_URL/elasticsearch.patch | git apply \
-#  && ./gradlew :distribution:archives:oss-linux-s390x-tar:assemble --parallel \
-    && ./gradlew :distribution:archives:oss-linux-${archt}-tar:assemble --parallel \
+ && cd $SOURCE_DIR && git clone https://github.com/elastic/elasticsearch && cd elasticsearch && git checkout v${ELASTICSEARCH_VER} \
+ && curl -sSL $PATCH_URL/elasticsearch.patch | git apply \
+ && ./gradlew :distribution:archives:oss-linux-s390x-tar:assemble --parallel \
 # Install Elasticsearch
-    && mkdir -p /usr/share/elasticsearch \
-#  && tar -xzf distribution/archives/oss-linux-s390x-tar/build/distributions/elasticsearch-oss-${ELASTICSEARCH_VER}-SNAPSHOT-linux-s390x.tar.gz -C /usr/share/elasticsearch --strip-components 1
-    && tar -xzf distribution/archives/oss-linux-s390x-tar/build/distributions/elasticsearch-oss-${ELASTICSEARCH_VER}-SNAPSHOT-linux-${archt}.tar.gz -C /usr/share/elasticsearch --strip-components 1
+ && mkdir -p /usr/share/elasticsearch \
+ && tar -xzf distribution/archives/oss-linux-s390x-tar/build/distributions/elasticsearch-oss-${ELASTICSEARCH_VER}-SNAPSHOT-linux-s390x.tar.gz -C /usr/share/elasticsearch --strip-components 1
 
 # The distribution includes a `config` directory, no need to create it
 COPY config/elasticsearch.yml config/log4j2.properties config/
@@ -124,8 +111,7 @@ RUN sed -i -e 's/ES_DISTRIBUTION_TYPE=tar/ES_DISTRIBUTION_TYPE=docker/' bin/elas
 # Add entrypoint
 ################################################################################
 
-# FROM s390x/ubuntu:20.04
-FROM ubuntu:20.04
+FROM s390x/ubuntu:20.04
 
 ENV ELASTIC_CONTAINER true
 
