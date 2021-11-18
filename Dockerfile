@@ -45,7 +45,7 @@ ENV JAVA15_HOME=/opt/adopt/java
 ENV PATH=$JAVA_HOME/bin:$PATH
 ENV PATCH_URL="https://raw.githubusercontent.com/linux-on-ibm-z/scripts/master/Elasticsearch/${ELASTICSEARCH_VER}/patch"
 # ENV ADOPTJDK_URL="https://github.com/AdoptOpenJDK/openjdk15-binaries/releases/download/jdk-15.0.2%2B7/OpenJDK15U-jdk_${archt}_linux_hotspot_15.0.2_7.tar.gz"
-ENV ADOPTJDK_URL="https://github.com/AdoptOpenJDK/openjdk15-binaries/releases/download/jdk-15%2B36_openj9-0.22.0/OpenJDK15U-jdk_${archt}_linux_openj9_15_36_openj9-0.22.0.tar.gz"
+# ENV ADOPTJDK_URL="https://github.com/AdoptOpenJDK/openjdk15-binaries/releases/download/jdk-15%2B36_openj9-0.22.0/OpenJDK15U-jdk_${archt}_linux_openj9_15_36_openj9-0.22.0.tar.gz"
 
 RUN apt-get update && apt-get install -y \
     curl \
@@ -86,9 +86,9 @@ WORKDIR /usr/share/elasticsearch
 RUN set -eux ; \
     archt="" ; \
     case "$(arch)" in \
-    aarch64) archt='';; \
-    x86_64)  archt='x64';; \
-    s390x)   archt='s390x';; \
+    aarch64) ADOPTJDK_URL="";; \
+    x86_64)  ADOPTJDK_URL="https://github.com/AdoptOpenJDK/openjdk15-binaries/releases/download/jdk-15%2B36_openj9-0.22.0/OpenJDK15U-jdk_x64_linux_openj9_linuxXL_15_36_openj9-0.22.0.tar.gz";; \
+    s390x)   ADOPTJDK_URL="https://github.com/AdoptOpenJDK/openjdk15-binaries/releases/download/jdk-15%2B36_openj9-0.22.0/OpenJDK15U-jdk_s390x_linux_openj9_linuxXL_15_36_openj9-0.22.0.tar.gz";; \
     *) echo >&2 ; echo >&2 "Unsupported architecture $(arch)" ; echo >&2 ; exit 1 ;; \
     esac ; \
     apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
