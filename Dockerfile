@@ -80,18 +80,21 @@ RUN /usr/sbin/groupadd -g 1000 elasticsearch && \
 WORKDIR /usr/share/elasticsearch
 
 # Set up locale
-RUN apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
- && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 \
+RUN apt-get install -y locales install -y python3-pip libyaml-dev \
+    && pip3 install elasticsearch==7.13.4 \
+    && pip3 install elasticsearch-curator==5.8.4 \
+    && rm -rf /var/lib/apt/lists/* \
+    && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 \
 # Install AdoptOpenJDK 15 (with hotspot)
- && cd $SOURCE_DIR && mkdir -p /opt/adopt/java && curl -SL -o adoptjdk.tar.gz $ADOPTJDK_URL \
- && tar -zxf adoptjdk.tar.gz -C /opt/adopt/java --strip-components 1 \
+    && cd $SOURCE_DIR && mkdir -p /opt/adopt/java && curl -SL -o adoptjdk.tar.gz $ADOPTJDK_URL \
+    && tar -zxf adoptjdk.tar.gz -C /opt/adopt/java --strip-components 1 \
 # Download and Build Elasticsearch
- && cd $SOURCE_DIR && git clone https://github.com/elastic/elasticsearch && cd elasticsearch && git checkout v${ELASTICSEARCH_VER} \
- && curl -sSL $PATCH_URL/elasticsearch.patch | git apply \
- && ./gradlew :distribution:archives:oss-linux-s390x-tar:assemble --parallel \
+    && cd $SOURCE_DIR && git clone https://github.com/elastic/elasticsearch && cd elasticsearch && git checkout v${ELASTICSEARCH_VER} \
+    && curl -sSL $PATCH_URL/elasticsearch.patch | git apply \
+    && ./gradlew :distribution:archives:oss-linux-s390x-tar:assemble --parallel \
 # Install Elasticsearch
- && mkdir -p /usr/share/elasticsearch \
- && tar -xzf distribution/archives/oss-linux-s390x-tar/build/distributions/elasticsearch-oss-${ELASTICSEARCH_VER}-SNAPSHOT-linux-s390x.tar.gz -C /usr/share/elasticsearch --strip-components 1
+    && mkdir -p /usr/share/elasticsearch \
+    && tar -xzf distribution/archives/oss-linux-s390x-tar/build/distributions/elasticsearch-oss-${ELASTICSEARCH_VER}-SNAPSHOT-linux-s390x.tar.gz -C /usr/share/elasticsearch --strip-components 1
 
 # The distribution includes a `config` directory, no need to create it
 COPY config/elasticsearch.yml config/log4j2.properties config/
