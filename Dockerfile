@@ -29,7 +29,8 @@
 # Extract Elasticsearch artifact
 ################################################################################
 
-FROM s390x/ubuntu:20.04 AS builder
+# FROM s390x/ubuntu:20.04 AS builder
+FROM gradle:latest AS builder
 
 ARG ELASTICSEARCH_VER=7.12.1
 
@@ -86,8 +87,8 @@ RUN apt-get install -y locales python3-pip libyaml-dev \
     && rm -rf /var/lib/apt/lists/* \
     && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 \
 # Install AdoptOpenJDK 15 (with hotspot)
-    && cd $SOURCE_DIR && mkdir -p /opt/adopt/java && curl -SL -o adoptjdk.tar.gz $ADOPTJDK_URL \
-    && tar -zxf adoptjdk.tar.gz -C /opt/adopt/java --strip-components 1 \
+    # && cd $SOURCE_DIR && mkdir -p /opt/adopt/java && curl -SL -o adoptjdk.tar.gz $ADOPTJDK_URL \
+    # && tar -zxf adoptjdk.tar.gz -C /opt/adopt/java --strip-components 1 \
 # Download and Build Elasticsearch
     && cd $SOURCE_DIR && git clone https://github.com/elastic/elasticsearch && cd elasticsearch && git checkout v${ELASTICSEARCH_VER} \
     && curl -sSL $PATCH_URL/elasticsearch.patch | git apply \
