@@ -50,8 +50,14 @@ RUN apt-get update && apt-get install -y \
     git \
     gzip \
     tar \
-    wget
-RUN printf "%s\n" 1000 2000 2001 2002 $other_gid_number | xargs -I{} awk -F: '$3 == {}' /etc/group | cut -d: -f1 | xargs -n1 echo userdel
+    wget \
+    locales \
+    python3-pip \
+    libyaml-dev \
+    && pip3 install elasticsearch==7.13.4 \
+    && pip3 install elasticsearch-curator==5.8.4 \
+    && rm -rf /var/lib/apt/lists/* \
+    && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 
 
 # `tini` is a tiny but valid init for containers. This is used to cleanly
 # control how ES and any child processes are shut down.
@@ -75,22 +81,18 @@ RUN set -eux ; \
     chmod +x /bin/tini
 
 ENV PATH /usr/share/elasticsearch/bin:$PATH
-RUN /usr/sbin/groupadd -g 1000 elasticsearch && \
-    /usr/sbin/useradd --uid 1000 --gid 1000 -d /usr/share/elasticsearch elasticsearch
+# RUN /usr/sbin/groupadd -g 1000 elasticsearch && \
+#     /usr/sbin/useradd --uid 1000 --gid 1000 -d /usr/share/elasticsearch elasticsearch
 
 WORKDIR /usr/share/elasticsearch
 
 # Set up locale
-RUN apt-get install -y locales python3-pip libyaml-dev \
-    && pip3 install elasticsearch==7.13.4 \
-    && pip3 install elasticsearch-curator==5.8.4 \
-    && rm -rf /var/lib/apt/lists/* \
-    && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 \
+
 # Install AdoptOpenJDK 15 (with hotspot)
     # && cd $SOURCE_DIR && mkdir -p /opt/adopt/java && curl -SL -o adoptjdk.tar.gz $ADOPTJDK_URL \
     # && tar -zxf adoptjdk.tar.gz -C /opt/adopt/java --strip-components 1 \
 # Download and Build Elasticsearch
-    && cd $SOURCE_DIR && git clone https://github.com/elastic/elasticsearch && cd elasticsearch && git checkout v${ELASTICSEARCH_VER} \
+RUN cd $SOURCE_DIR && git clone https://github.com/elastic/elasticsearch && cd elasticsearch && git checkout v${ELASTICSEARCH_VER} \
     && curl -sSL $PATCH_URL/elasticsearch.patch | git apply \
     && ./gradlew :distribution:archives:oss-linux-s390x-tar:assemble --parallel \
 # Install Elasticsearch
