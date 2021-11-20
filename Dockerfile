@@ -51,6 +51,7 @@ RUN apt-get update && apt-get install -y \
     gzip \
     tar \
     wget
+RUN printf "%s\n" 1000 2000 2001 2002 $other_gid_number | xargs -I{} awk -F: '$3 == {}' /etc/group | cut -d: -f1 | xargs -n1 echo userdel
 
 # `tini` is a tiny but valid init for containers. This is used to cleanly
 # control how ES and any child processes are shut down.
@@ -74,7 +75,6 @@ RUN set -eux ; \
     chmod +x /bin/tini
 
 ENV PATH /usr/share/elasticsearch/bin:$PATH
-
 RUN /usr/sbin/groupadd -g 1000 elasticsearch && \
     /usr/sbin/useradd --uid 1000 --gid 1000 -d /usr/share/elasticsearch elasticsearch
 
