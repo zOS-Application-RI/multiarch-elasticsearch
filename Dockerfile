@@ -80,7 +80,7 @@ RUN /usr/sbin/groupadd -g 1000 elasticsearch && \
 WORKDIR /usr/share/elasticsearch
 
 # Set up locale
-RUN apt-get install -y locales install -y python3-pip libyaml-dev \
+RUN apt-get install -y locales python3-pip libyaml-dev \
     && pip3 install elasticsearch==7.13.4 \
     && pip3 install elasticsearch-curator==5.8.4 \
     && rm -rf /var/lib/apt/lists/* \
