@@ -94,7 +94,7 @@ WORKDIR /usr/share/elasticsearch
 # Download and Build Elasticsearch
 RUN cd $SOURCE_DIR && git clone https://github.com/elastic/elasticsearch && cd elasticsearch && git checkout v${ELASTICSEARCH_VER} \
     && curl -sSL $PATCH_URL/elasticsearch.patch | git apply \
-    && ./gradlew :distribution:archives:oss-linux-s390x-tar:assemble --parallel \
+    && ./gradlew :distribution:archives:oss-linux-s390x-tar:assemble --parallel --scan \
 # Install Elasticsearch
     && mkdir -p /usr/share/elasticsearch \
     && tar -xzf distribution/archives/oss-linux-s390x-tar/build/distributions/elasticsearch-oss-${ELASTICSEARCH_VER}-SNAPSHOT-linux-s390x.tar.gz -C /usr/share/elasticsearch --strip-components 1
