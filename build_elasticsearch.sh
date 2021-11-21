@@ -91,6 +91,7 @@ function configureAndInstall() {
         git clone $ES_REPO_URL
         cd "${CURDIR}/elasticsearch"
         git checkout v$PACKAGE_VERSION
+        git update-index --chmod=+x gradlew
 
         # Apply patch
         curl -sSL $PATCH_URL/elasticsearch.patch | git apply
@@ -98,7 +99,7 @@ function configureAndInstall() {
         # Building Elasticsearch
         printf -- 'Building Elasticsearch \n'
         printf -- 'Build might take some time. Sit back and relax\n'
-        ./gradlew :distribution:archives:oss-linux-s390x-tar:assemble --parallel --no-daemon
+        ./gradlew :distribution:archives:oss-linux-s390x-tar:assemble --parallel --no-daemon --debug
 
         # Verifying Elasticsearch installation
         if [[ $(grep -q "BUILD FAILED" "$LOG_FILE") ]]; then
@@ -108,11 +109,11 @@ function configureAndInstall() {
         printf -- 'Built Elasticsearch successfully. \n\n'
 
         printf -- 'Creating distributions as deb, rpm and docker: \n\n'
-                ./gradlew :distribution:packages:s390x-oss-deb:assemble
+                ./gradlew :distribution:packages:s390x-oss-deb:assemble --debug
         printf -- 'Created deb distribution. \n\n'
-                ./gradlew :distribution:packages:s390x-oss-rpm:assemble
+                ./gradlew :distribution:packages:s390x-oss-rpm:assemble --debug
         printf -- 'Created rpm distribution. \n\n'
-                ./gradlew :distribution:docker:oss-docker-s390x-build-context:assemble
+                ./gradlew :distribution:docker:oss-docker-s390x-build-context:assemble --debug
         printf -- 'Created docker distribution. \n\n'
 
         printf -- "\n\nInstalling Elasticsearch\n"
