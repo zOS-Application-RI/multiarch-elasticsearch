@@ -3,18 +3,19 @@
 # LICENSE: Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0)
 #
 # Instructions:
-# Download build script: wget https://raw.githubusercontent.com/linux-on-ibm-z/scripts/master/Elasticsearch/7.12.1/build_elasticsearch.sh
+# Download build script: wget https://raw.githubusercontent.com/linux-on-ibm-z/scripts/master/Elasticsearch/7.11.2/build_elasticsearch.sh
 # Execute build script: bash build_elasticsearch.sh    (provide -h for help)
 #
 set -e -o pipefail
 
 PACKAGE_NAME="elasticsearch"
-PACKAGE_VERSION="7.12.1"
+PACKAGE_VERSION="7.11.2"
 CURDIR="$(pwd)"
 PATCH_URL="https://raw.githubusercontent.com/linux-on-ibm-z/scripts/master/Elasticsearch/${PACKAGE_VERSION}/patch"
 ES_REPO_URL="https://github.com/elastic/elasticsearch"
 LOG_FILE="$CURDIR/logs/${PACKAGE_NAME}-${PACKAGE_VERSION}-$(date +"%F-%T").log"
 NON_ROOT_USER="$(whoami)"
+JAVA_PROVIDED="OpenJDK11"
 FORCE="false"
 BUILD_ENV="$HOME/setenv.sh"
 
@@ -36,6 +37,11 @@ function prepare() {
         else
                 printf -- 'Sudo : No \n' >>"$LOG_FILE"
                 printf -- 'Install sudo from repository using apt, yum or zypper based on your distro. \n'
+                exit 1
+        fi
+
+        if [[ "$JAVA_PROVIDED" != "AdoptJDK15_hotspot" && "$JAVA_PROVIDED" != "OpenJDK11" ]]; then
+                printf "$JAVA_PROVIDED is not supported, Please use valid java from {AdoptJDK15_hotspot, OpenJDK11} only"
                 exit 1
         fi
 
@@ -68,18 +74,45 @@ function cleanup() {
 
 function configureAndInstall() {
         printf -- '\nConfiguration and Installation started \n'
+        echo "Java provided by user: $JAVA_PROVIDED" >> "$LOG_FILE"
 
+    if [[ "$JAVA_PROVIDED" == "AdoptJDK15_hotspot" ]]; then
         # Install AdoptOpenJDK 15 (With Hotspot)
         cd "$CURDIR"
         sudo mkdir -p /opt/adopt/java
+
         curl -SL -o adoptjdk.tar.gz https://github.com/AdoptOpenJDK/openjdk15-binaries/releases/download/jdk-15.0.2%2B7/OpenJDK15U-jdk_s390x_linux_hotspot_15.0.2_7.tar.gz
         # Everytime new jdk is downloaded, Ensure that --strip valueis correct
         sudo tar -zxf adoptjdk.tar.gz -C /opt/adopt/java --strip-components 1
 
         export JAVA_HOME=/opt/adopt/java
         export JAVA15_HOME=/opt/adopt/java
+
         printf -- "export JAVA_HOME=/opt/adopt/java\n" >> "$BUILD_ENV"
         printf -- "Installation of AdoptOpenJDK 15 (With Hotspot) is successful\n" >> "$LOG_FILE"
+
+    elif [[ "$JAVA_PROVIDED" == "OpenJDK11" ]]; then
+        if [[ "${ID}" == "ubuntu" ]]; then
+                sudo DEBIAN_FRONTEND=noninteractive apt-get install -y openjdk-11-jdk
+                export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-s390x
+                export JAVA11_HOME=/usr/lib/jvm/java-11-openjdk-s390x
+                printf -- "export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-s390x\n" >> "$BUILD_ENV"
+        elif [[ "${ID}" == "rhel" ]]; then
+                sudo yum install -y java-11-openjdk java-11-openjdk-devel
+                export JAVA_HOME=/usr/lib/jvm/java-11-openjdk
+                export JAVA11_HOME=/usr/lib/jvm/java-11-openjdk
+                printf -- "export JAVA_HOME=/usr/lib/jvm/java-11-openjdk\n" >> "$BUILD_ENV"
+        elif [[ "${ID}" == "sles" ]]; then
+                sudo zypper install -y java-11-openjdk java-11-openjdk-devel
+                export JAVA_HOME=/usr/lib64/jvm/java-11-openjdk
+                export JAVA11_HOME=/usr/lib64/jvm/java-11-openjdk
+                printf -- "export JAVA_HOME=/usr/lib64/jvm/java-11-openjdk\n" >> "$BUILD_ENV"
+        fi
+        printf -- "Installation of OpenJDK 11 is successful\n" >> "$LOG_FILE"
+    else
+        printf "$JAVA_PROVIDED is not supported, Please use valid java from {AdoptJDK15_hotspot, OpenJDK11} only"
+        exit 1
+    fi
 
         export PATH=$JAVA_HOME/bin:$PATH
         printf -- "export PATH=$JAVA_HOME/bin:$PATH\n" >> "$BUILD_ENV"
@@ -91,15 +124,30 @@ function configureAndInstall() {
         git clone $ES_REPO_URL
         cd "${CURDIR}/elasticsearch"
         git checkout v$PACKAGE_VERSION
-        git update-index --chmod=+x gradlew
 
-        # Apply patch
-        curl -sSL $PATCH_URL/elasticsearch.patch | git apply
+        # Download required files and apply patch
+
+        wget $PATCH_URL/build.gradle -P ${CURDIR}/elasticsearch/distribution/archives/linux-s390x-tar
+        wget $PATCH_URL/build.gradle -P ${CURDIR}/elasticsearch/distribution/archives/oss-linux-s390x-tar
+        wget $PATCH_URL/build.gradle -P ${CURDIR}/elasticsearch/distribution/packages/s390x-deb
+        wget $PATCH_URL/build.gradle -P ${CURDIR}/elasticsearch/distribution/packages/s390x-oss-deb
+        wget $PATCH_URL/build.gradle -P ${CURDIR}/elasticsearch/distribution/packages/s390x-oss-rpm
+        wget $PATCH_URL/build.gradle -P ${CURDIR}/elasticsearch/distribution/packages/s390x-rpm
+        wget $PATCH_URL/build.gradle -P ${CURDIR}/elasticsearch/distribution/docker/docker-s390x-export
+        wget $PATCH_URL/build.gradle -P ${CURDIR}/elasticsearch/distribution/docker/oss-docker-s390x-export
+
+        wget $PATCH_URL/docker_build_context_build.gradle -P ${CURDIR}/elasticsearch/distribution/docker/docker-s390x-build-context
+        mv ${CURDIR}/elasticsearch/distribution/docker/docker-s390x-build-context/docker_build_context_build.gradle ${CURDIR}/elasticsearch/distribution/docker/docker-s390x-build-context/build.gradle
+
+        wget $PATCH_URL/oss_docker_build_context_build.gradle -P ${CURDIR}/elasticsearch/distribution/docker/oss-docker-s390x-build-context
+        mv ${CURDIR}/elasticsearch/distribution/docker/oss-docker-s390x-build-context/oss_docker_build_context_build.gradle ${CURDIR}/elasticsearch/distribution/docker/oss-docker-s390x-build-context/build.gradle
+
+        wget -O - $PATCH_URL/diff.patch | git apply
 
         # Building Elasticsearch
         printf -- 'Building Elasticsearch \n'
         printf -- 'Build might take some time. Sit back and relax\n'
-        ./gradlew :distribution:archives:oss-linux-s390x-tar:assemble --parallel --no-daemon --debug
+        ./gradlew :distribution:archives:oss-linux-s390x-tar:assemble --parallel
 
         # Verifying Elasticsearch installation
         if [[ $(grep -q "BUILD FAILED" "$LOG_FILE") ]]; then
@@ -109,11 +157,11 @@ function configureAndInstall() {
         printf -- 'Built Elasticsearch successfully. \n\n'
 
         printf -- 'Creating distributions as deb, rpm and docker: \n\n'
-                ./gradlew :distribution:packages:s390x-oss-deb:assemble --debug
+                ./gradlew :distribution:packages:s390x-oss-deb:assemble
         printf -- 'Created deb distribution. \n\n'
-                ./gradlew :distribution:packages:s390x-oss-rpm:assemble --debug
+                ./gradlew :distribution:packages:s390x-oss-rpm:assemble
         printf -- 'Created rpm distribution. \n\n'
-                ./gradlew :distribution:docker:oss-docker-s390x-build-context:assemble --debug
+                ./gradlew :distribution:docker:oss-docker-s390x-build-context:assemble
         printf -- 'Created docker distribution. \n\n'
 
         printf -- "\n\nInstalling Elasticsearch\n"
@@ -158,33 +206,33 @@ function runTest() {
 
 function installClient() {
         printf -- '\nInstalling Elasticsearch Curator client\n'
-
-        if [[ "${ID}" == "ubuntu" ]]; then
-            sudo apt-get update
-            sudo apt-get install -y python3-pip libyaml-dev
-            sudo pip3 install elasticsearch==7.13.4
-            sudo pip3 install elasticsearch-curator==5.8.4
-        elif [[ "${ID}" == "rhel" ]]; then
-            sudo yum install -y python3-devel libyaml-devel
-            sudo pip3 install elasticsearch==7.13.4
-            sudo pip3 install elasticsearch-curator==5.8.4
-        else
-            if [[ "${DISTRO}" == "sles-15.2" ]]; then
-                sudo zypper install -y python3-devel python3-pip libyaml-devel
-                sudo pip3 install elasticsearch==7.13.4
-                sudo pip3 install elasticsearch-curator==5.8.4
-            else
-                sudo zypper install -y libyaml-devel
-                # Installing Python 3.9.4 for SLES 12 SP5
-                cd "${CURDIR}"
-                wget https://raw.githubusercontent.com/linux-on-ibm-z/scripts/master/Python3/3.9.4/build_python3.sh
-                bash build_python3.sh -y
-                rm -f build_python3.sh
-                sudo -H env PATH=$PATH pip3 install elasticsearch==7.13.4
-                sudo -H env PATH=$PATH pip3 install elasticsearch-curator==5.8.4
-            fi
+        if [[ "${ID}" == "sles" ]]; then
+          sudo zypper install -y python3 python3-pip
         fi
 
+        if [[ "${ID}" == "ubuntu" ]]; then
+          sudo apt-get update
+          sudo apt-get install -y python3-pip
+        fi
+
+        if [[ "${ID}" == "rhel" ]]; then
+          sudo yum install -y python3-devel
+          sudo mkdir -p /usr/local/lib/python3.6
+          sudo ln -sf /usr/lib/python3.6/site-packages /usr/local/lib/python3.6/
+        fi
+        wget https://github.com/elastic/curator/archive/V5.8.3.tar.gz -O elasticsearch-curator.tar.gz
+        tar -xzf elasticsearch-curator.tar.gz
+        rm -rf elasticsearch-curator.tar.gz
+        cd curator-5.8.3/
+        curl  -o requirements.patch $PATCH_URL/requirements.patch
+        curl  -o setup.py.patch $PATCH_URL/setup.py.patch
+        curl  -o setup.cfg.patch $PATCH_URL/setup.cfg.patch
+
+        patch requirements.txt < requirements.patch
+        patch setup.py < setup.py.patch
+        patch setup.cfg < setup.cfg.patch
+        sudo python3 setup.py install
+        cd ../
         # Verifying Elasticsearch installation
         if command -v curator >/dev/null; then
                 printf -- "\nInstalled Elasticsearch Curator client successfully\n"
@@ -209,11 +257,12 @@ function logDetails() {
 function printHelp() {
         echo
         echo "Usage: "
-        echo "bash  build_elasticsearch.sh  [-d debug] [-y install-without-confirmation] [-t install-with-tests]"
+        echo "bash  build_elasticsearch.sh  [-d debug] [-y install-without-confirmation] [-t install-with-tests] [-j Java to be used from {AdoptJDK15_hotspot, OpenJDK11}]"
+        echo "  default: If no -j specified, openjdk-11 will be installed"
         echo
 }
 
-while getopts "h?dyt" opt; do
+while getopts "h?dytj:" opt; do
         case "$opt" in
         h | \?)
                 printHelp
@@ -235,6 +284,9 @@ while getopts "h?dyt" opt; do
                 else
                         TESTS="true"
                 fi
+                ;;
+        j)
+                JAVA_PROVIDED="$OPTARG"
                 ;;
         esac
 done
@@ -258,7 +310,7 @@ case "$DISTRO" in
         printf -- "Installing %s %s for %s \n" "$PACKAGE_NAME" "$PACKAGE_VERSION" "$DISTRO" | tee -a "$LOG_FILE"
         printf -- "Installing dependencies... it may take some time.\n"
         sudo apt-get update
-        sudo apt-get install -y curl git gzip tar wget patch locales |& tee -a "$LOG_FILE"
+        sudo apt-get install -y curl git gzip tar wget patch locales libyaml-dev |& tee -a "$LOG_FILE"
         sudo locale-gen en_US.UTF-8
         configureAndInstall |& tee -a "$LOG_FILE"
         installClient |& tee -a "$LOG_FILE"
@@ -267,7 +319,7 @@ case "$DISTRO" in
 "rhel-7.8" | "rhel-7.9" | "rhel-8.1" | "rhel-8.2" | "rhel-8.3")
         printf -- "Installing %s %s for %s \n" "$PACKAGE_NAME" "$PACKAGE_VERSION" "$DISTRO" |& tee -a "$LOG_FILE"
         printf -- "Installing dependencies... it may take some time.\n"
-        sudo yum install -y curl git gzip tar wget patch |& tee -a "$LOG_FILE"
+        sudo yum install -y curl git gzip tar wget patch libyaml-devel |& tee -a "$LOG_FILE"
         configureAndInstall |& tee -a "$LOG_FILE"
         installClient |& tee -a "$LOG_FILE"
         ;;
@@ -275,7 +327,7 @@ case "$DISTRO" in
 "sles-12.5" | "sles-15.2")
         printf -- "Installing %s %s for %s \n" "$PACKAGE_NAME" "$PACKAGE_VERSION" "$DISTRO" |& tee -a "$LOG_FILE"
         printf -- "Installing dependencies... it may take some time.\n"
-        sudo zypper install -y curl git gzip tar wget patch | tee -a "$LOG_FILE"
+        sudo zypper install -y curl git gzip tar wget patch libyaml-devel | tee -a "$LOG_FILE"
         configureAndInstall |& tee -a "$LOG_FILE"
         installClient |& tee -a "$LOG_FILE"
         ;;
