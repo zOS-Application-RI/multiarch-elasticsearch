@@ -80,7 +80,7 @@ RUN /usr/sbin/groupadd -g 1000 elasticsearch && \
 WORKDIR /usr/share/elasticsearch
 
 # Set up locale
-RUN apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
+RUN apt-get install -y locales sudo && rm -rf /var/lib/apt/lists/* \
     && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 \
     # Install AdoptOpenJDK 15 (with hotspot)
     && cd $SOURCE_DIR && mkdir -p /opt/adopt/java && curl -SL -o adoptjdk.tar.gz $ADOPTJDK_URL \
