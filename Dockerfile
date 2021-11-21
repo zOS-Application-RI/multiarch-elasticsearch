@@ -78,7 +78,8 @@ RUN /usr/sbin/groupadd -g 1000 elasticsearch && \
     /usr/sbin/useradd --uid 1000 --gid 1000 -d /usr/share/elasticsearch elasticsearch
 
 WORKDIR /usr/share/elasticsearch
-
+ADD build_elasticsearch.sh /tmp/build_elasticsearch.sh
+USER root
 # Set up locale
 RUN apt-get install -y locales sudo && rm -rf /var/lib/apt/lists/* \
     && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 \
@@ -90,8 +91,9 @@ RUN apt-get install -y locales sudo && rm -rf /var/lib/apt/lists/* \
     # && curl -sSL $PATCH_URL/elasticsearch.patch | git apply \
     # && ./gradlew :distribution:archives:oss-linux-s390x-tar:assemble --parallel \
     # Install Elasticsearch
-    && wget -q https://raw.githubusercontent.com/linux-on-ibm-z/scripts/master/Elasticsearch/7.12.1/build_elasticsearch.sh \
-    && chmod a+x ./build_elasticsearch.sh && ./build_elasticsearch.sh -y \
+    # && wget -q https://raw.githubusercontent.com/linux-on-ibm-z/scripts/master/Elasticsearch/7.12.1/build_elasticsearch.sh \
+    && chmod a+x ./tmp/build_elasticsearch.sh \
+    && bash /tmp/build_elasticsearch.sh -y \
     && mkdir -p /usr/share/elasticsearch \
     && tar -xzf distribution/archives/oss-linux-s390x-tar/build/distributions/elasticsearch-oss-${ELASTICSEARCH_VER}-SNAPSHOT-linux-s390x.tar.gz -C /usr/share/elasticsearch --strip-components 1
 
