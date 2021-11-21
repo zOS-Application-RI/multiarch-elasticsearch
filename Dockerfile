@@ -29,8 +29,7 @@
 # Extract Elasticsearch artifact
 ################################################################################
 
-# FROM s390x/ubuntu:20.04 AS builder
-FROM gradle:latest AS builder
+FROM s390x/ubuntu:20.04 AS builder
 
 ARG ELASTICSEARCH_VER=7.12.1
 
@@ -39,8 +38,8 @@ LABEL maintainer="LoZ Open Source Ecosystem (https://www.ibm.com/community/z/use
 
 ENV LANG="en_US.UTF-8"
 ENV SOURCE_DIR="/tmp/"
-# ENV JAVA_HOME=/opt/adopt/java
-# ENV JAVA15_HOME=/opt/adopt/java
+ENV JAVA_HOME=/opt/adopt/java
+ENV JAVA15_HOME=/opt/adopt/java
 ENV PATH=$JAVA_HOME/bin:$PATH
 ENV PATCH_URL="https://raw.githubusercontent.com/linux-on-ibm-z/scripts/master/Elasticsearch/${ELASTICSEARCH_VER}/patch"
 ENV ADOPTJDK_URL="https://github.com/AdoptOpenJDK/openjdk15-binaries/releases/download/jdk-15.0.2%2B7/OpenJDK15U-jdk_s390x_linux_hotspot_15.0.2_7.tar.gz"
@@ -50,14 +49,7 @@ RUN apt-get update && apt-get install -y \
     git \
     gzip \
     tar \
-    wget \
-    locales \
-    python3-pip \
-    libyaml-dev \
-    && pip3 install elasticsearch==7.13.4 \
-    && pip3 install elasticsearch-curator==5.8.4 \
-    && rm -rf /var/lib/apt/lists/* \
-    && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 
+    wget
 
 # `tini` is a tiny but valid init for containers. This is used to cleanly
 # control how ES and any child processes are shut down.
@@ -68,10 +60,10 @@ RUN apt-get update && apt-get install -y \
 RUN set -eux ; \
     tini_bin="" ; \
     case "$(arch)" in \
-        aarch64) tini_bin='tini-arm64' ;; \
-        x86_64)  tini_bin='tini-amd64' ;; \
-        s390x)   tini_bin='tini-s390x' ;; \
-        *) echo >&2 ; echo >&2 "Unsupported architecture $(arch)" ; echo >&2 ; exit 1 ;; \
+    aarch64) tini_bin='tini-arm64' ;; \
+    x86_64)  tini_bin='tini-amd64' ;; \
+    s390x)   tini_bin='tini-s390x' ;; \
+    *) echo >&2 ; echo >&2 "Unsupported architecture $(arch)" ; echo >&2 ; exit 1 ;; \
     esac ; \
     curl --retry 10 -S -L -O https://github.com/krallin/tini/releases/download/v0.19.0/${tini_bin} ; \
     curl --retry 10 -S -L -O https://github.com/krallin/tini/releases/download/v0.19.0/${tini_bin}.sha256sum ; \
@@ -81,21 +73,25 @@ RUN set -eux ; \
     chmod +x /bin/tini
 
 ENV PATH /usr/share/elasticsearch/bin:$PATH
-# RUN /usr/sbin/groupadd -g 1000 elasticsearch && \
-#     /usr/sbin/useradd --uid 1000 --gid 1000 -d /usr/share/elasticsearch elasticsearch
+
+RUN /usr/sbin/groupadd -g 1000 elasticsearch && \
+    /usr/sbin/useradd --uid 1000 --gid 1000 -d /usr/share/elasticsearch elasticsearch
 
 WORKDIR /usr/share/elasticsearch
 
 # Set up locale
-
-# Install AdoptOpenJDK 15 (with hotspot)
-    # && cd $SOURCE_DIR && mkdir -p /opt/adopt/java && curl -SL -o adoptjdk.tar.gz $ADOPTJDK_URL \
-    # && tar -zxf adoptjdk.tar.gz -C /opt/adopt/java --strip-components 1 \
-# Download and Build Elasticsearch
-RUN cd $SOURCE_DIR && git clone https://github.com/elastic/elasticsearch && cd elasticsearch && git checkout v${ELASTICSEARCH_VER} \
-    && curl -sSL $PATCH_URL/elasticsearch.patch | git apply \
-    && ./gradlew :distribution:archives:oss-linux-s390x-tar:assemble --parallel --scan \
-# Install Elasticsearch
+RUN apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
+    && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 \
+    # Install AdoptOpenJDK 15 (with hotspot)
+    && cd $SOURCE_DIR && mkdir -p /opt/adopt/java && curl -SL -o adoptjdk.tar.gz $ADOPTJDK_URL \
+    && tar -zxf adoptjdk.tar.gz -C /opt/adopt/java --strip-components 1 \
+    # Download and Build Elasticsearch
+    # && cd $SOURCE_DIR && git clone https://github.com/elastic/elasticsearch && cd elasticsearch && git checkout v${ELASTICSEARCH_VER} \
+    # && curl -sSL $PATCH_URL/elasticsearch.patch | git apply \
+    # && ./gradlew :distribution:archives:oss-linux-s390x-tar:assemble --parallel \
+    # Install Elasticsearch
+    && wget -q https://raw.githubusercontent.com/linux-on-ibm-z/scripts/master/Elasticsearch/7.12.1/build_elasticsearch.sh \
+    && chmod a+x ./build_elasticsearch.sh && ./build_elasticsearch.sh -force \
     && mkdir -p /usr/share/elasticsearch \
     && tar -xzf distribution/archives/oss-linux-s390x-tar/build/distributions/elasticsearch-oss-${ELASTICSEARCH_VER}-SNAPSHOT-linux-s390x.tar.gz -C /usr/share/elasticsearch --strip-components 1
 
