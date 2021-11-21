@@ -91,7 +91,7 @@ RUN apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
     # && ./gradlew :distribution:archives:oss-linux-s390x-tar:assemble --parallel \
     # Install Elasticsearch
     && wget -q https://raw.githubusercontent.com/linux-on-ibm-z/scripts/master/Elasticsearch/7.12.1/build_elasticsearch.sh \
-    && chmod a+x ./build_elasticsearch.sh && ./build_elasticsearch.sh -force \
+    && chmod a+x ./build_elasticsearch.sh && ./build_elasticsearch.sh -y \
     && mkdir -p /usr/share/elasticsearch \
     && tar -xzf distribution/archives/oss-linux-s390x-tar/build/distributions/elasticsearch-oss-${ELASTICSEARCH_VER}-SNAPSHOT-linux-s390x.tar.gz -C /usr/share/elasticsearch --strip-components 1
 
