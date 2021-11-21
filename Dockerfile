@@ -78,21 +78,22 @@ RUN /usr/sbin/groupadd -g 1000 elasticsearch && \
     /usr/sbin/useradd --uid 1000 --gid 1000 -d /usr/share/elasticsearch elasticsearch
 
 WORKDIR /usr/share/elasticsearch
-ADD build_elasticsearch.sh /tmp/build_elasticsearch.sh
+
 USER root
+ADD build_elasticsearch.sh /tmp/build_elasticsearch.sh
 # Set up locale
 RUN apt-get install -y locales sudo && rm -rf /var/lib/apt/lists/* \
     && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 \
     # Install AdoptOpenJDK 15 (with hotspot)
-    && cd $SOURCE_DIR && mkdir -p /opt/adopt/java && curl -SL -o adoptjdk.tar.gz $ADOPTJDK_URL \
-    && tar -zxf adoptjdk.tar.gz -C /opt/adopt/java --strip-components 1 \
+    # && cd $SOURCE_DIR && mkdir -p /opt/adopt/java && curl -SL -o adoptjdk.tar.gz $ADOPTJDK_URL \
+    # && tar -zxf adoptjdk.tar.gz -C /opt/adopt/java --strip-components 1 \
     # Download and Build Elasticsearch
     # && cd $SOURCE_DIR && git clone https://github.com/elastic/elasticsearch && cd elasticsearch && git checkout v${ELASTICSEARCH_VER} \
     # && curl -sSL $PATCH_URL/elasticsearch.patch | git apply \
     # && ./gradlew :distribution:archives:oss-linux-s390x-tar:assemble --parallel \
     # Install Elasticsearch
     # && wget -q https://raw.githubusercontent.com/linux-on-ibm-z/scripts/master/Elasticsearch/7.12.1/build_elasticsearch.sh \
-    && chmod a+x ./tmp/build_elasticsearch.sh \
+    && chmod a+x /tmp/build_elasticsearch.sh \
     && bash /tmp/build_elasticsearch.sh -y \
     && mkdir -p /usr/share/elasticsearch \
     && tar -xzf distribution/archives/oss-linux-s390x-tar/build/distributions/elasticsearch-oss-${ELASTICSEARCH_VER}-SNAPSHOT-linux-s390x.tar.gz -C /usr/share/elasticsearch --strip-components 1
